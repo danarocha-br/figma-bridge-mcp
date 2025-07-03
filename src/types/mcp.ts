@@ -2,12 +2,23 @@ import { z } from 'zod';
 
 // MCP Tool schemas for validation
 export const FigmaContextSchema = z.object({
-  url: z.string().url(),
+  url: z.string().refine(
+    (url) => {
+      try {
+        new URL(url);
+        return url.includes('figma.com');
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Must be a valid Figma URL' }
+  ),
   options: z
     .object({
       includeVariants: z.boolean().optional(),
       includeComponents: z.boolean().optional(),
       includeTokens: z.boolean().optional(),
+      includeCode: z.boolean().optional(),
     })
     .optional(),
 });

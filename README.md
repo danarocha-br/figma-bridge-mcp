@@ -400,21 +400,86 @@ Our design-to-code workflow optimization results:
 # Clone and install
 git clone https://github.com/your-org/figma-bridge-mcp.git
 cd figma-bridge-mcp
-npm install
+pnpm install
 
-# Set up environment
-cp .env.example .env
-# Add your API keys
+# Build the project
+pnpm run build
 
 # Start development server
-npm run dev
+pnpm run dev
 
 # Run tests
-npm test
+pnpm run test
 
-# Build for production
-npm run build
+# Test with MCP Inspector (Visual Testing)
+pnpm run inspector
+
+# Run all tests (TypeScript, ESLint, Jest, MCP)
+pnpm run test:all
 ```
+
+### Testing Your Implementation
+
+#### 🎯 **Method 1: Visual Testing with MCP Inspector (Recommended)**
+
+```bash
+pnpm run inspector
+```
+
+This will:
+1. Build the project
+2. Start the MCP Inspector
+3. Open a web interface at `http://localhost:6274`
+
+In the web interface, you can:
+- View all 6 MCP tools
+- Test tool parameters interactively
+- See real-time responses
+- Debug schema validation
+
+#### 🔧 **Method 2: Command Line Testing**
+
+```bash
+# Test all tools via command line
+pnpm run test:mcp
+
+# Or test individual tools
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | node dist/index.js
+```
+
+#### 🏗️ **Method 3: Integration with Claude Code**
+
+```bash
+# Add to Claude Code for direct testing
+claude mcp add figma-bridge-local "node $(pwd)/dist/index.js"
+
+# Verify installation
+claude mcp list
+```
+
+#### 🎨 **Method 4: Test with Real Figma Data**
+
+To test with actual Figma designs:
+1. Open Figma desktop app
+2. Run `pnpm run inspector`
+3. Test with real Figma URLs
+
+### Testing Scenarios
+
+✅ **Basic Functionality**
+- Tools list correctly
+- Schema validation works
+- Error handling is graceful
+
+✅ **Figma Integration**
+- Detects Figma MCP server availability
+- Parses Figma URLs correctly
+- Provides helpful fallback messages
+
+✅ **Performance**
+- Response caching works
+- Concurrent requests handled
+- Timeout handling functions
 
 ### Project Structure
 

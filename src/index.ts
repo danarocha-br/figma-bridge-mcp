@@ -2,6 +2,13 @@
 
 import { FigmaBridgeMCPServer } from './server.js';
 
+/**
+ * Main entry point for the Figma Bridge MCP Server.
+ *
+ * @async
+ * @function main
+ * @returns {Promise<void>} Resolves when the server is running, rejects if there's an error.
+ */
 async function main(): Promise<void> {
   try {
     const server = new FigmaBridgeMCPServer();

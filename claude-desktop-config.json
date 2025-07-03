@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "figma-bridge-mcp": {
+      "command": "node",
+      "args": ["/Users/danarocha/Projects/figma-bridge-mcp/dist/index.js"]
+    }
+  }
+}
