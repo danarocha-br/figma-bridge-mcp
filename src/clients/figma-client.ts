@@ -640,6 +640,7 @@ export class FigmaClient {
         const listenForResponse = async () => {
           try {
             let buffer = '';
+            // eslint-disable-next-line no-constant-condition
             while (true) {
               const { value, done } = await reader.read();
               if (done) {

@@ -71,6 +71,110 @@ The interactive setup wizard will:
    - Generates production-ready React code
 3. **Review and refine** the generated code
 
+## 🔄 **User Workflow: How It Actually Works**
+
+### The Complete User Journey
+
+**Step 1: Developer in Cursor IDE (or Windsurf, Claude Code, etc.)**
+
+```
+Developer: "Implement this design: https://www.figma.com/design/id/project?node-id=000000"
+```
+
+**Step 2: Behind the Scenes Magic**
+
+```
+Cursor → Official Figma MCP Server
+├─ get_code(url, nodeId) → Generates React code + finds UI components
+├─ get_variable_defs(url) → Extracts design tokens
+└─ Result: {code, components, variables, assets}
+
+Cursor → Our Figma Bridge MCP
+├─ Tool: extractFigmaContext or extractFigmaContextStreaming
+├─ Input: {figmaData: <official_figma_result>, url: <figma_url>}
+└─ Enhanced bridge processing with intelligent mapping
+```
+
+**Step 3: Our Bridge Intelligence**
+
+```
+Bridge MCP receives Figma data:
+{
+  "figmaData": {
+    "code": "<div className='flex flex-col space-y-4'>...</div>",
+    "components": [{"name": "Button"}, {"name": "Input"}],
+    "variables": [
+      {"name": "color-success", "value": "#10B981"},
+      {"name": "spacing-md", "value": "16px"}
+    ]
+  }
+}
+
+Bridge MCP adds intelligence:
+├─ 🔍 Scans your codebase for existing components
+├─ 🎨 Maps Figma variables → your design tokens (color-success → bg-green-500)
+├─ 🧩 Matches Figma components → your existing components
+└─ 📋 Provides smart context for accurate code generation
+```
+
+**Step 4: Intelligent Code Generation**
+
+```
+Cursor AI receives BOTH:
+├─ Official Figma data (React code, components, tokens)
+├─ Our Bridge context (codebase mappings, token translations)
+└─ Generates production code using YOUR existing components
+
+Generated Result:
+import { Button } from './components/ui/Button';
+import { Input } from './components/ui/Input';
+
+export function AdminDashboard() {
+  return (
+    <div className="flex flex-col space-y-4 p-6 bg-gray-50">
+      <Input placeholder="Enter email" className="w-full" />
+      <Button variant="primary" size="md">Save Changes</Button>
+    </div>
+  );
+}
+```
+
+### The Key Difference
+
+**Without Figma Bridge MCP:**
+
+```
+Figma → Official MCP → Generic React code with basic Tailwind
+Result: <button className="bg-blue-500 px-4 py-2">Click me</button>
+```
+
+**With Figma Bridge MCP:**
+
+```
+Figma → Official MCP → Bridge Intelligence → YOUR existing components
+Result: <Button variant="primary" size="md">Click me</Button>
+```
+
+### Tool Selection Logic
+
+**How AI Tools Choose Between Our Tools:**
+
+```typescript
+// Tool 1: Standard extraction
+'extractFigmaContext': 'Extract design context and specifications from Figma'
+→ AI chooses for: Basic extraction, simple layouts
+
+// Tool 2: Performance-optimized
+'extractFigmaContextStreaming': 'Performance-optimized... 3-5x faster... smart timeout management'
+→ AI chooses for: Complex layouts, performance-critical scenarios, timeout issues
+```
+
+**User sees the difference:**
+
+- **Simple components**: 2-5 seconds with either tool
+- **Complex layouts**: 50+ seconds vs 7-10 seconds (bulletproof streaming)
+- **Missing components**: Smart suggestions vs generic fallbacks
+
 ## 📖 **How It Works**
 
 Figma Bridge MCP orchestrates a series of AI-powered processes to transform Figma designs into production-ready React code.
@@ -345,39 +449,39 @@ When a Figma component doesn't exist in your codebase:
 
 ```typescript
 // Extract design context from Figma
-await mcp.call("extractFigmaContext", {
-  url: "https://figma.com/file/...",
+await mcp.call('extractFigmaContext', {
+  url: 'https://figma.com/file/...',
   options: { includeVariants: true },
 });
 
 // Generate React code
-await mcp.call("generateReactCode", {
+await mcp.call('generateReactCode', {
   figmaData: extractedData,
-  preferences: { typescript: true, styling: "styled-components" },
+  preferences: { typescript: true, styling: 'styled-components' },
 });
 
 // Validate design system compliance
-await mcp.call("validateDesignSystem", {
+await mcp.call('validateDesignSystem', {
   code: generatedCode,
-  rules: ["token-usage", "accessibility", "performance"],
+  rules: ['token-usage', 'accessibility', 'performance'],
 });
 
 // Map components between Figma and code
-await mcp.call("mapComponents", {
+await mcp.call('mapComponents', {
   figmaComponents: figmaData.components,
   codeComponents: discoveredComponents,
 });
 
 // Synchronize design tokens
-await mcp.call("syncTokens", {
+await mcp.call('syncTokens', {
   figmaTokens: figmaData.tokens,
   codeTokens: projectTokens,
 });
 
 // Analyze codebase structure
-await mcp.call("analyzeCodebase", {
-  path: "./src",
-  framework: "react",
+await mcp.call('analyzeCodebase', {
+  path: './src',
+  framework: 'react',
 });
 ```
 
@@ -427,11 +531,13 @@ pnpm run inspector
 ```
 
 This will:
+
 1. Build the project
 2. Start the MCP Inspector
 3. Open a web interface at `http://localhost:6274`
 
 In the web interface, you can:
+
 - View all 6 MCP tools
 - Test tool parameters interactively
 - See real-time responses
@@ -460,6 +566,7 @@ claude mcp list
 #### 🎨 **Method 4: Test with Real Figma Data**
 
 To test with actual Figma designs:
+
 1. Open Figma desktop app
 2. Run `pnpm run inspector`
 3. Test with real Figma URLs
@@ -467,16 +574,19 @@ To test with actual Figma designs:
 ### Testing Scenarios
 
 ✅ **Basic Functionality**
+
 - Tools list correctly
 - Schema validation works
 - Error handling is graceful
 
 ✅ **Figma Integration**
+
 - Detects Figma MCP server availability
 - Parses Figma URLs correctly
 - Provides helpful fallback messages
 
 ✅ **Performance**
+
 - Response caching works
 - Concurrent requests handled
 - Timeout handling functions

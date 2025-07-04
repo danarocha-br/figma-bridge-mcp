@@ -107,6 +107,59 @@ export type DesignSystemValidationInput = z.infer<typeof DesignSystemValidationS
 export type TokenSyncInput = z.infer<typeof TokenSyncSchema>;
 export type CodebaseAnalysisInput = z.infer<typeof CodebaseAnalysisSchema>;
 
+// Streaming Figma Context Schema for performance optimization
+export const StreamingFigmaContextSchema = z
+  .object({
+    // Option 1: Provide URL for standalone extraction (fallback)
+    url: z
+      .string()
+      .refine(
+        (url) => {
+          try {
+            new URL(url);
+            return url.includes('figma.com');
+          } catch {
+            return false;
+          }
+        },
+        { message: 'Must be a valid Figma URL' }
+      )
+      .optional(),
+
+    // Option 2: Provide pre-extracted Figma data (preferred for IDE integration)
+    figmaData: z
+      .union([
+        FigmaDataSchema,
+        z.object({}).strict(), // Empty object from MCP Inspector
+      ])
+      .optional(),
+
+    options: z
+      .object({
+        includeVariants: z.boolean().optional(),
+        includeComponents: z.boolean().optional(),
+        includeTokens: z.boolean().optional(),
+        includeCode: z.boolean().optional(),
+        // NEW: Streaming options for performance optimization
+        streamingEnabled: z.boolean().default(true),
+        progressUpdates: z.boolean().default(true),
+        timeoutStrategy: z.enum(['graceful', 'partial', 'fail']).default('graceful'),
+        maxWaitTime: z.number().min(5000).max(60000).default(15000), // 15s max wait
+      })
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      // Check for valid figmaData (not empty object) or URL
+      const hasValidFigmaData =
+        data.figmaData && typeof data.figmaData === 'object' && 'fileId' in data.figmaData;
+      return data.url || hasValidFigmaData;
+    },
+    { message: 'Either url or valid figmaData must be provided' }
+  );
+
+export type StreamingFigmaContextInput = z.infer<typeof StreamingFigmaContextSchema>;
+
 // MCP Tool result types
 export interface ToolResult {
   success: boolean;
