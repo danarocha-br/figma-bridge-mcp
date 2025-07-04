@@ -1,27 +1,68 @@
 import { z } from 'zod';
 
-// MCP Tool schemas for validation
-export const FigmaContextSchema = z.object({
-  url: z.string().refine(
-    (url) => {
-      try {
-        new URL(url);
-        return url.includes('figma.com');
-      } catch {
-        return false;
-      }
-    },
-    { message: 'Must be a valid Figma URL' }
-  ),
-  options: z
+// Figma data schema for pre-extracted data from official Figma MCP
+export const FigmaDataSchema = z.object({
+  fileId: z.string(),
+  nodeId: z.string().optional(),
+  url: z.string(),
+  code: z.string().nullable().optional(),
+  components: z.array(z.any()).optional().default([]),
+  variables: z.array(z.any()).optional().default([]),
+  codeConnectMap: z.array(z.any()).optional().default([]),
+  assets: z
     .object({
-      includeVariants: z.boolean().optional(),
-      includeComponents: z.boolean().optional(),
-      includeTokens: z.boolean().optional(),
-      includeCode: z.boolean().optional(),
+      images: z.array(z.any()).optional(),
+      icons: z.array(z.any()).optional(),
     })
     .optional(),
 });
+
+// MCP Tool schemas for validation - supports both URL extraction and pre-extracted data
+export const FigmaContextSchema = z
+  .object({
+    // Option 1: Provide URL for standalone extraction (fallback)
+    url: z
+      .string()
+      .refine(
+        (url) => {
+          try {
+            new URL(url);
+            return url.includes('figma.com');
+          } catch {
+            return false;
+          }
+        },
+        { message: 'Must be a valid Figma URL' }
+      )
+      .optional(),
+
+    // Option 2: Provide pre-extracted Figma data (preferred for IDE integration)
+    // Handle both undefined and empty objects from MCP Inspector
+    figmaData: z
+      .union([
+        FigmaDataSchema,
+        z.object({}).strict(), // Empty object from MCP Inspector
+      ])
+      .optional(),
+
+    options: z
+      .object({
+        includeVariants: z.boolean().optional(),
+        includeComponents: z.boolean().optional(),
+        includeTokens: z.boolean().optional(),
+        includeCode: z.boolean().optional(),
+      })
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      // Check for valid figmaData (not empty object) or URL
+      const hasValidFigmaData =
+        data.figmaData && typeof data.figmaData === 'object' && 'fileId' in data.figmaData;
+      return data.url || hasValidFigmaData;
+    },
+    { message: 'Either url or valid figmaData must be provided' }
+  );
 
 export const ReactCodeGenerationSchema = z.object({
   figmaData: z.any(), // Will be refined as we develop the Figma integration

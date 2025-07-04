@@ -51,7 +51,24 @@ class FigmaBridgeMCPServer {
                 url: {
                   type: 'string',
                   format: 'uri',
-                  description: 'Figma file or frame URL',
+                  description: 'Figma file or frame URL (for standalone extraction)',
+                },
+                figmaData: {
+                  type: 'object',
+                  description:
+                    'Pre-extracted Figma data from official Figma MCP (preferred for IDE integration)',
+                  properties: {
+                    fileId: { type: 'string' },
+                    nodeId: { type: 'string', nullable: true },
+                    url: { type: 'string' },
+                    code: { type: 'string', nullable: true },
+                    components: { type: 'array', items: { type: 'object' } },
+                    variables: { type: 'array', items: { type: 'object' } },
+                    codeConnectMap: { type: 'array', items: { type: 'object' } },
+                    assets: { type: 'object', nullable: true },
+                  },
+                  required: ['fileId', 'url'],
+                  additionalProperties: false,
                 },
                 options: {
                   type: 'object',
@@ -61,14 +78,15 @@ class FigmaBridgeMCPServer {
                     includeTokens: { type: 'boolean', description: 'Include design tokens' },
                     includeCode: {
                       type: 'boolean',
-                      description: 'Include code generation for layout analysis (may timeout for complex frames)',
+                      description:
+                        'Include code generation for layout analysis (may timeout for complex frames)',
                       default: true,
                     },
                   },
                   additionalProperties: false,
                 },
               },
-              required: ['url'],
+              anyOf: [{ required: ['url'] }, { required: ['figmaData'] }],
               additionalProperties: false,
             },
           },
@@ -303,6 +321,66 @@ class FigmaBridgeMCPServer {
     const input = FigmaContextSchema.parse(args);
 
     try {
+      // Check if pre-extracted Figma data was provided (preferred for IDE integration)
+      // MCP Inspector sends empty object {} when field is not filled
+      const hasValidFigmaData =
+        input.figmaData && typeof input.figmaData === 'object' && 'fileId' in input.figmaData;
+
+      if (hasValidFigmaData) {
+        console.error(`🎯 Using pre-extracted Figma data from IDE integration`);
+
+        // Use the provided Figma data instead of extracting again
+        // TypeScript assertion since we checked hasValidFigmaData
+        const figmaData = input.figmaData as {
+          fileId: string;
+          nodeId?: string;
+          url: string;
+          code?: string | null;
+          components?: any[];
+          variables?: any[];
+          codeConnectMap?: any[];
+        };
+
+        const result = {
+          success: true,
+          figmaData: {
+            fileId: figmaData.fileId,
+            nodeId: figmaData.nodeId,
+            url: figmaData.url,
+            code: figmaData.code || null,
+            components: figmaData.components || [],
+            variables: figmaData.variables || [],
+            codeConnectMap: figmaData.codeConnectMap || [],
+          },
+          errors: [],
+          warnings: [],
+        };
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text:
+                `✅ Figma context processed successfully from IDE integration\n\n` +
+                `📊 **Processed Data:**\n` +
+                `- Components: ${result.figmaData.components.length}\n` +
+                `- Variables: ${result.figmaData.variables.length}\n` +
+                `- Code Mappings: ${result.figmaData.codeConnectMap.length}\n` +
+                `- Generated Code: ${result.figmaData.code ? 'Yes' : 'No'}\n\n` +
+                `💡 **Integration Mode:** Using pre-extracted data (no duplicate API calls)\n\n` +
+                `**Raw Data:** ${JSON.stringify(result.figmaData, null, 2)}`,
+            },
+          ],
+        };
+      }
+
+      // Fallback: Extract from URL if no pre-extracted data provided
+      if (!input.url) {
+        throw new Error('Either figmaData or url must be provided');
+      }
+
+      console.error(`🔄 Fallback: Extracting from URL ${input.url} (standalone mode)`);
+
       // Import the FigmaClient dynamically to avoid circular dependencies
       const { FigmaClient } = await import('./clients/figma-client.js');
       const figmaClient = new FigmaClient();
@@ -393,9 +471,23 @@ class FigmaBridgeMCPServer {
       console.error(`🎉 Total extraction time: ${Date.now() - startTime}ms`);
 
       // Check for timeout errors and add helpful warnings
-      const hasTimeoutError = codeError && (codeError.includes('timeout') || codeError.includes('timed out'));
-      const timeoutWarning = hasTimeoutError && shouldIncludeCode 
-        ? [`💡 **Tip:** Code generation timed out. Try with {"includeCode": false} for faster variable extraction only.`]
+      const hasTimeoutError =
+        codeError && (codeError.includes('timeout') || codeError.includes('timed out'));
+      const timeoutWarning =
+        hasTimeoutError && shouldIncludeCode
+          ? [
+              `💡 **Tip:** Code generation timed out. Try with {"includeCode": false} for faster variable extraction only.`,
+            ]
+          : [];
+
+      // Check for null code and provide helpful context
+      const hasNullCode = shouldIncludeCode && !codeError && codeData?.code === null;
+      const nullCodeWarning = hasNullCode
+        ? [
+            `ℹ️  **Node Type:** This Figma node doesn't support React code generation.`,
+            `💡 **Tip:** Try selecting a component instance or UI frame for code generation.`,
+            `📊 **Available:** Design tokens (${variables?.variables?.length || 0}) are still extracted for styling.`,
+          ]
         : [];
 
       const result = {
@@ -414,7 +506,7 @@ class FigmaBridgeMCPServer {
           ...(variablesError ? [`Variables: ${variablesError}`] : []),
           ...(codeConnectError ? [`Code Connect: ${codeConnectError}`] : []),
         ],
-        warnings: timeoutWarning,
+        warnings: [...timeoutWarning, ...nullCodeWarning],
       };
 
       return {
