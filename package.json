@@ -20,8 +20,11 @@
     "clean": "rm -rf dist",
     "inspector": "./scripts/test-inspector.sh",
     "inspector:quick": "pnpm run build && npx @modelcontextprotocol/inspector node dist/index.js",
-    "test:mcp": "pnpm run build && ./test-mcp-tools.sh",
-    "test:all": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run test:mcp"
+    "test:all": "pnpm run typecheck && pnpm run lint && pnpm run test",
+    "debug:real-figma": "node scripts/debug/test-real-figma.js",
+    "debug:bulletproof": "node scripts/debug/test-bulletproof-extraction.js",
+    "debug:components": "node scripts/debug/debug-components.js",
+    "debug:complex-layout": "node scripts/debug/test-complex-layout-url.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.6.0",

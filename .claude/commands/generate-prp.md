@@ -39,7 +39,7 @@ Generate a complete PRP for Figma Bridge MCP feature implementation with thoroug
 
 ## PRP Generation
 
-Using prps/templates/prp_base.md as template:
+Using prps/templates/prp-base.md as template:
 
 ### Critical Context to Include and pass to the AI agent as part of the PRP
 

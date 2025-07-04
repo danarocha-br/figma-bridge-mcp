@@ -1,5 +1,4 @@
 import { FigmaBridgeMCPServer } from '../../src/server';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 describe('extractFigmaContext Integration Tests', () => {
   let server: any;
